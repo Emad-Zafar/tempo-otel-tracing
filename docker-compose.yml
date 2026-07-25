@@ -1,0 +1,59 @@
+services:
+  tempo:
+    image: grafana/tempo:2.5.0
+    container_name: tempo
+    command:
+      - "-config.file=/etc/tempo/tempo.yaml"
+      - "-config.expand-env=true"
+    ports:
+      - "3200:3200"
+    volumes:
+      - ./tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo_data:/var/tempo
+    environment:
+      - TEMPO_S3_BUCKET_NAME=${TEMPO_S3_BUCKET_NAME:-}
+      - TEMPO_S3_REGION=${TEMPO_S3_REGION:-}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3200/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector:0.108.0
+    container_name: otel-collector
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel-collector/config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    depends_on:
+      - tempo
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    depends_on:
+      - tempo
+    restart: unless-stopped
+
+networks:
+  default:
+    name: observability-net
+    external: true
+
+volumes:
+  tempo_data:
+  grafana_data:

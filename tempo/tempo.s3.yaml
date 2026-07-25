@@ -1,0 +1,42 @@
+server:
+  http_listen_port: 3200
+  log_level: info
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+ingester:
+  max_block_duration: 5m
+  trace_idle_period: 30s
+
+compactor:
+  compaction:
+    block_retention: 168h
+
+storage:
+  trace:
+    backend: s3
+    wal:
+      path: /var/tempo/wal
+    s3:
+      bucket: ${TEMPO_S3_BUCKET_NAME}
+      region: ${TEMPO_S3_REGION}
+      endpoint: s3.${TEMPO_S3_REGION}.amazonaws.com
+      insecure: false
+
+metrics_generator:
+  storage:
+    path: /var/tempo/generator/wal
+    # remote_write:
+    #   - url: http://prometheus:9090/api/v1/write
+
+# overrides:
+#   defaults:
+#     metrics_generator:
+#       processors: [service-graphs, span-metrics]
