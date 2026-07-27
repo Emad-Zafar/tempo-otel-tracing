@@ -1,50 +1,41 @@
 services:
-  tempo:
-    image: grafana/tempo:2.5.0
-    container_name: tempo
-    command:
-      - "-config.file=/etc/tempo/tempo.yaml"
-      - "-config.expand-env=true"
+  grafana:
+    image: grafana/grafana:12.4.2
+    container_name: grafana
     ports:
-      - "3200:3200"
+      - "3030:3000"
     volumes:
-      - ./tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
-      - tempo_data:/var/tempo
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - grafana_data:/var/lib/grafana
     environment:
-      - TEMPO_S3_BUCKET_NAME=${TEMPO_S3_BUCKET_NAME:-}
-      - TEMPO_S3_REGION=${TEMPO_S3_REGION:-}
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:3200/ready || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    restart: unless-stopped
-
-  otel-collector:
-    image: otel/opentelemetry-collector:0.108.0
-    container_name: otel-collector
-    command: ["--config=/etc/otelcol/config.yaml"]
-    volumes:
-      - ./otel-collector/config.yaml:/etc/otelcol/config.yaml:ro
-    ports:
-      - "4317:4317"
-      - "4318:4318"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
     depends_on:
       - tempo
     restart: unless-stopped
 
-  grafana:
-    image: grafana/grafana:11.2.0
-    container_name: grafana
+  tempo:
+    image: grafana/tempo:2.10.3
+    container_name: tempo
+    command: ["-config.file=/etc/tempo.yaml"]
     ports:
-      - "3000:3000"
+      - "3200:3200"
     volumes:
-      - ./grafana/provisioning:/etc/grafana/provisioning:ro
-      - grafana_data:/var/lib/grafana
-    environment:
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
-      - GF_USERS_ALLOW_SIGN_UP=false
+      - ./tempo/tempo-config.yml:/etc/tempo.yaml
+      - tempo_data:/var/tempo
+    restart: unless-stopped
+
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy
+    ports:
+      - "12345:12345"
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy
+    command: ["run", "--server.http.listen-addr=0.0.0.0:12345", "/etc/alloy/config.alloy"]
     depends_on:
       - tempo
     restart: unless-stopped
@@ -55,5 +46,5 @@ networks:
     external: true
 
 volumes:
-  tempo_data:
   grafana_data:
+  tempo_data:

@@ -3,12 +3,12 @@ apiVersion: 1
 datasources:
   - name: Tempo
     type: tempo
-    access: proxy
     uid: tempo
     url: http://tempo:3200
+    access: proxy
     isDefault: true
     jsonData:
-      # Draw the node graph for a single trace from its spans.
+      # Node graph for a single trace, built from its spans.
       nodeGraph:
         enabled: true
       # Trace to logs and the aggregated service map need a Loki and a
