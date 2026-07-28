@@ -17,6 +17,28 @@ separate step covered in [docs/INSTRUMENTATION.md](docs/INSTRUMENTATION.md).
 More than one service, where you want to see a request cross service boundaries
 and find where time goes. Works on Compose or plain containers.
 
+## How it works
+
+A trace is the story of one request. Each unit of work (an HTTP handler, a
+database call) is a span, and all the spans for one request share a trace id and
+form a tree. The trace id travels between services in a `traceparent` header, so
+a request that crosses several services stays a single trace.
+
+- Your services emit spans over OTLP once instrumented.
+- Alloy receives OTLP and forwards to Tempo. Your apps only know the Alloy
+  address, so batching and sampling change in one place.
+- Tempo stores the traces.
+- Grafana shows them, with a node graph for each trace.
+
+```
+services  ->  Alloy (OTLP)  ->  Tempo  ->  Grafana
+  send OTLP     batch, forward    store      view traces
+```
+
+Unlike logs and container metrics, traces do not exist until your code emits
+them, so this stack has an instrumentation step (step 6) that the logging and
+metrics stacks do not need.
+
 ## Prerequisites
 
 - Docker and Docker Compose on the host
